@@ -1,0 +1,28 @@
+post_install() {
+    echo
+    echo "🎤 HOTSPEECH INSTALLED SUCCESSFULLY!"
+    echo "===================================="
+    echo
+    echo "⚡ QUICK SETUP (2 minutes):"
+    echo "   1. Run: hotspeech-setup"
+    echo "   2. Enter your OpenAI API key when prompted"
+    echo "   3. Set up hotkeys in your desktop environment"
+    echo "   4. Start using: hotspeech daemon"
+    echo
+    echo "🔥 HOTKEY COMMANDS:"
+    echo "   Start Recording: hotspeech record"
+    echo "   Stop Recording:  hotspeech stop"
+    echo
+    echo "📖 Full documentation: /usr/share/doc/hotspeech/README.md"
+    echo
+}
+
+post_upgrade() {
+    echo
+    echo "🎤 HOTSPEECH UPDATED!"
+    echo "===================="
+    echo
+    echo "Your configuration and recordings are preserved."
+    echo "If you experience issues, run: hotspeech-setup"
+    echo
+} 

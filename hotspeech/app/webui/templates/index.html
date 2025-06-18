@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .recording-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .recording-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .transcription {
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status-done {
+            color: green;
+        }
+        .status-error {
+            color: red;
+        }
+        .status-pending {
+            color: orange;
+        }
+        .audio-player {
+            width: 100%;
+            margin: 10px 0;
+        }
+        #search-form {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Hotspeech Dashboard</h1>
+        
+        <div class="row mb-4">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        Search Recordings
+                    </div>
+                    <div class="card-body">
+                        <form id="search-form">
+                            <div class="input-group">
+                                <input type="text" id="search-query" class="form-control" placeholder="Search transcriptions..." required minlength="3">
+                                <button type="submit" class="btn btn-primary">Search</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <h2>Recent Recordings</h2>
+        <div id="recordings-list">
+            {% if recordings %}
+                {% for recording in recordings %}
+                    <div class="recording-item" data-id="{{ recording.id }}">
+                        <div class="d-flex justify-content-between">
+                            <h5>Recording #{{ recording.id }}</h5>
+                            <span class="status-{{ recording.status }}">[{{ recording.status }}]</span>
+                        </div>
+                        
+                        <div class="text-muted small">
+                            {{ recording.created_at }} | Model: {{ recording.model_used or 'N/A' }}
+                        </div>
+                        
+                        {% if recording.audio_path %}
+                            <audio controls class="audio-player">
+                                <source src="/api/audio/{{ recording.id }}" type="audio/wav">
+                                Your browser does not support the audio element.
+                            </audio>
+                        {% endif %}
+                        
+                        {% if recording.transcription %}
+                            <div class="transcription">{{ recording.transcription }}</div>
+                        {% else %}
+                            <div class="alert alert-warning mt-2">No transcription available</div>
+                        {% endif %}
+                        
+                        {% if recording.error_message %}
+                            <div class="alert alert-danger mt-2">{{ recording.error_message }}</div>
+                        {% endif %}
+                        
+                        <div class="recording-actions mt-3">
+                            <button class="btn btn-sm btn-primary copy-btn" data-id="{{ recording.id }}">
+                                Copy to Clipboard
+                            </button>
+                            
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                    Re-transcribe with
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item transcribe-btn" data-id="{{ recording.id }}" data-model="whisper-1" href="#">Whisper API (default)</a></li>
+                                    <li><a class="dropdown-item transcribe-btn" data-id="{{ recording.id }}" data-model="faster-whisper" href="#">Faster Whisper (local)</a></li>
+                                </ul>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-danger delete-btn" data-id="{{ recording.id }}">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-info">No recordings yet. Use the hotkey to record something!</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Toast notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="notification-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto" id="toast-title">Notification</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toast-message">
+                Action completed successfully.
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Utility functions
+        function showToast(title, message) {
+            document.getElementById('toast-title').textContent = title;
+            document.getElementById('toast-message').textContent = message;
+            const toast = new bootstrap.Toast(document.getElementById('notification-toast'));
+            toast.show();
+        }
+        
+        function refreshRecordings() {
+            fetch('/api/recordings')
+                .then(response => response.json())
+                .then(data => {
+                    // For a production app, we'd use a template engine or framework here
+                    // For simplicity in this demo, we'll just reload the page
+                    window.location.reload();
+                })
+                .catch(error => {
+                    showToast('Error', 'Failed to refresh recordings');
+                    console.error('Error refreshing recordings:', error);
+                });
+        }
+        
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Copy to clipboard
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const recordingId = this.getAttribute('data-id');
+                    fetch(`/api/copy/${recordingId}`, { method: 'POST' })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Success', 'Copied to clipboard');
+                            } else {
+                                showToast('Error', 'Failed to copy to clipboard');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error', 'Failed to copy to clipboard');
+                            console.error('Copy error:', error);
+                        });
+                });
+            });
+            
+            // Re-transcribe
+            document.querySelectorAll('.transcribe-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const recordingId = parseInt(this.getAttribute('data-id'));
+                    const model = this.getAttribute('data-model');
+                    
+                    // Update UI to show pending
+                    const recordingItem = document.querySelector(`.recording-item[data-id="${recordingId}"]`);
+                    const statusSpan = recordingItem.querySelector('.status-done, .status-error, .status-pending');
+                    statusSpan.className = 'status-pending';
+                    statusSpan.textContent = '[pending]';
+                    
+                    fetch('/api/transcribe', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ recording_id: recordingId, model: model })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        showToast('Success', 'Transcription updated');
+                        refreshRecordings();
+                    })
+                    .catch(error => {
+                        showToast('Error', 'Failed to transcribe');
+                        console.error('Transcription error:', error);
+                        // Reset status
+                        statusSpan.className = 'status-error';
+                        statusSpan.textContent = '[error]';
+                    });
+                });
+            });
+            
+            // Delete recording
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    if (!confirm('Are you sure you want to delete this recording?')) {
+                        return;
+                    }
+                    
+                    const recordingId = this.getAttribute('data-id');
+                    fetch(`/api/recording/${recordingId}`, { method: 'DELETE' })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('Success', 'Recording deleted');
+                                refreshRecordings();
+                            } else {
+                                showToast('Error', 'Failed to delete recording');
+                            }
+                        })
+                        .catch(error => {
+                            showToast('Error', 'Failed to delete recording');
+                            console.error('Delete error:', error);
+                        });
+                });
+            });
+            
+            // Search form
+            document.getElementById('search-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const query = document.getElementById('search-query').value.trim();
+                
+                if (query.length < 3) {
+                    showToast('Error', 'Search query must be at least 3 characters');
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('query', query);
+                
+                fetch('/api/search', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // For simplicity, we'll just reload with the filtered results
+                    // In a real app, we'd update the DOM
+                    refreshRecordings();
+                    showToast('Search Results', `Found ${data.length} matching recordings`);
+                })
+                .catch(error => {
+                    showToast('Error', 'Search failed');
+                    console.error('Search error:', error);
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

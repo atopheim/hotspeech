@@ -1,0 +1,93 @@
+#!/bin/bash
+# Hotspeech Quick Setup Script
+# Run this after installing from AUR: hotspeech-setup
+
+set -e
+
+echo "🎤 HOTSPEECH QUICK SETUP"
+echo "========================"
+echo
+
+# Create user config directory
+CONFIG_DIR="$HOME/.config/hotspeech"
+CONFIG_FILE="$CONFIG_DIR/config.toml"
+AUDIO_DIR="$HOME/.local/share/hotspeech/audio"
+
+echo "📁 Creating configuration directories..."
+mkdir -p "$CONFIG_DIR"
+mkdir -p "$AUDIO_DIR"
+
+# Copy system config if user config doesn't exist
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "📝 Creating user configuration..."
+    cp /etc/hotspeech/config.toml "$CONFIG_FILE"
+    
+    # Update paths in user config
+    sed -i "s|~/.hotspeech/audio|$AUDIO_DIR|g" "$CONFIG_FILE"
+    sed -i "s|~/.hotspeech/hotspeech.db|$HOME/.local/share/hotspeech/hotspeech.db|g" "$CONFIG_FILE"
+fi
+
+# Get OpenAI API key
+echo
+echo "🔑 OpenAI API Key Setup"
+echo "You need an OpenAI API key for transcription."
+echo "Get one from: https://platform.openai.com/api-keys"
+echo
+
+# Check if API key is already set
+current_key=$(grep 'api_key = ' "$CONFIG_FILE" | cut -d'"' -f2)
+if [ -n "$current_key" ] && [ "$current_key" != "" ]; then
+    echo "✅ API key already configured in $CONFIG_FILE"
+    read -p "Update API key? [y/N] " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        current_key=""  # Don't update
+    fi
+fi
+
+if [ -z "$current_key" ] || [ "$current_key" = "" ]; then
+    read -p "Enter your OpenAI API key (or press Enter to skip): " api_key
+    
+    if [[ ! -z "$api_key" ]]; then
+        # Update config.toml with the API key
+        sed -i "s/api_key = \"\"/api_key = \"$api_key\"/" "$CONFIG_FILE"
+        echo "✅ API key saved to $CONFIG_FILE"
+    else
+        echo "⚠️  No API key provided. You can:"
+        echo "   1. Edit $CONFIG_FILE and add your key later"
+        echo "   2. Set environment variable: export OPENAI_API_KEY='your-key'"
+    fi
+fi
+
+echo
+echo "🎉 SETUP COMPLETE!"
+echo
+echo "=" * 60
+echo "🚀 QUICK START:"
+echo "   1. Start daemon: hotspeech daemon"
+echo "   2. Test recording: hotspeech record"
+echo "   3. View recordings: hotspeech-cli list"
+echo
+echo "⌨️  HOTKEY SETUP (choose your desktop environment):"
+echo
+echo "🖥️  GNOME/Ubuntu:"
+echo "   Settings → Keyboard → View and Customize Shortcuts → Custom Shortcuts"
+echo "   Add: Name='Start Recording', Command='hotspeech record', Shortcut=Ctrl+Shift+R"
+echo "   Add: Name='Stop Recording', Command='hotspeech stop', Shortcut=Ctrl+Shift+Q"
+echo
+echo "🖥️  KDE Plasma:"
+echo "   System Settings → Shortcuts → Custom Shortcuts → New → Global Shortcut"
+echo "   Use the same commands as above"
+echo
+echo "🖥️  i3/sway:"
+echo "   Add to config: bindsym \$mod+Shift+r exec hotspeech record"
+echo "   Add to config: bindsym \$mod+Shift+q exec hotspeech stop"
+echo
+echo "🌐 WEB INTERFACE:"
+echo "   After starting daemon: http://localhost:8080"
+echo
+echo "📖 Full documentation: /usr/share/doc/hotspeech/README.md"
+echo "⚙️  Configuration file: $CONFIG_FILE"
+echo "=" * 60
+echo
+echo "Ready to use! Run 'hotspeech daemon' to start." 
