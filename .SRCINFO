@@ -14,7 +14,7 @@ pkgbase = hotspeech
 	depends = python-fastapi
 	depends = uvicorn
 	depends = python-jinja
-	depends = python-python-multipart
+	depends = python-multipart
 	depends = python-openai
 	depends = python-toml
 	depends = python-pydantic
@@ -26,4 +26,4 @@ pkgbase = hotspeech
 	source = hotspeech-1.0.0.tar.gz::https://github.com/atopheim/hotspeech/archive/v1.0.0.tar.gz
 	sha256sums = 6d66ba4a51308e8f0a375eb44ee362ef3a0e03a66fc7ab0cc27822ea9e5643b6
 
-pkgname = hotspeech
+pkgname = hotspeech 
