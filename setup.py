@@ -9,16 +9,24 @@ import os
 
 # Read the README file
 def read_readme():
-    with open("README.md", "r", encoding="utf-8") as fh:
-        return fh.read()
+    try:
+        with open("README.md", "r", encoding="utf-8") as fh:
+            return fh.read()
+    except FileNotFoundError:
+        return "Voice recording and transcription tool with hotkey support and web interface"
 
 
-# Read requirements
-def read_requirements():
-    with open("requirements.txt", "r", encoding="utf-8") as fh:
-        return [
-            line.strip() for line in fh if line.strip() and not line.startswith("#")
-        ]
+# Define requirements directly
+def get_requirements():
+    return [
+        "fastapi>=0.104.0",
+        "uvicorn[standard]>=0.24.0",
+        "jinja2>=3.1.0",
+        "python-multipart>=0.0.6",
+        "openai>=1.0.0",
+        "toml>=0.10.2",
+        "pydantic>=2.0.0",
+    ]
 
 
 setup(
@@ -47,7 +55,7 @@ setup(
         "Topic :: Office/Business",
     ],
     python_requires=">=3.8",
-    install_requires=read_requirements(),
+    install_requires=get_requirements(),
     entry_points={
         "console_scripts": [
             "hotspeech=hotspeech.main:main",
