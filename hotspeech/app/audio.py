@@ -214,7 +214,7 @@ def show_recording_notification():
                 "-t",
                 "0",
                 "RECORDING IN PROGRESS",
-                "Recording audio... Press ctrl+shift+q to stop.",
+                "Recording audio... Press Ctrl+Alt+W to stop.",
             ]
         )
         print(f"DEBUG: notify-send result: {result.returncode}")
@@ -230,7 +230,7 @@ def show_recording_notification():
                 [
                     "xmessage",
                     "-center",
-                    "RECORDING IN PROGRESS. Press ctrl+shift+q to stop.",
+                    "RECORDING IN PROGRESS. Press Ctrl+Alt+W to stop.",
                 ]
             )
         except Exception as e:
@@ -265,7 +265,7 @@ def start_recording_with_ui(
             # Print confirmation to terminal
             print("\n\n*** RECORDING STARTED ***")
             print(f"Recording to: {output_file}")
-            print("Press ctrl + shift + q to stop recording")
+            print("Press Ctrl+Alt+W to stop recording")
             print("**********************\n")
 
             # Monitor both the recording process and notification

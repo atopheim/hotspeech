@@ -117,7 +117,49 @@ def show_recording(db, recording_id):
         print(f"Error: {recording['error_message'] or 'Unknown error'}")
 
 
-def delete_recording(db, recording_id):
+def transcribe_file(args):
+    """Transcribe an arbitrary audio file"""
+    config = load_config()
+    transcriber = Transcriber(config)
+
+    audio_path = args.file
+    if not os.path.exists(audio_path):
+        print(f"Error: Audio file not found at {audio_path}")
+        return 1
+
+    print(f"Transcribing file: {audio_path}")
+    model = args.model if args.model else config["transcription"]["model"]
+    print(f"Using model: {model}")
+
+    result = transcriber.transcribe(audio_path, model=model)
+
+    if result["transcription"]:
+        print("Transcription successful:")
+        print(result["transcription"])
+
+        if args.copy:
+            Clipboard.copy_to_clipboard(result["transcription"])
+            print("Transcription copied to clipboard.")
+
+        # Add to database if requested
+        if args.save:
+            db = Database(os.path.expanduser(config["storage"]["sqlite_path"]))
+            db.add_recording(
+                audio_path=audio_path,
+                transcription=result["transcription"],
+                model_used=result["model_used"],
+                status=result["status"],
+                error_message=result["error_message"],
+            )
+            print("Recording saved to database.")
+
+        return 0
+    else:
+        print(f"Transcription failed: {result['error_message']}")
+        return 1
+
+
+def delete_recording(args):
     """Delete a recording"""
     recording = db.get_recording(recording_id)
 
@@ -179,6 +221,21 @@ def main():
     show_parser = subparsers.add_parser("show", help="Show details of a recording")
     show_parser.add_argument("id", type=int, help="Recording ID")
 
+    # Transcribe file command
+    transcribe_file_parser = subparsers.add_parser(
+        "transcribe-file", help="Transcribe an audio file"
+    )
+    transcribe_file_parser.add_argument("file", help="Path to audio file")
+    transcribe_file_parser.add_argument(
+        "--model", "-m", help="Model to use for transcription"
+    )
+    transcribe_file_parser.add_argument(
+        "--copy", "-c", action="store_true", help="Copy result to clipboard"
+    )
+    transcribe_file_parser.add_argument(
+        "--save", "-s", action="store_true", help="Save recording to database"
+    )
+
     # Delete command
     delete_parser = subparsers.add_parser("delete", help="Delete a recording")
     delete_parser.add_argument("id", type=int, help="Recording ID")
@@ -210,6 +267,8 @@ def main():
         list_recordings(db, args.limit)
     elif args.command == "show":
         show_recording(db, args.id)
+    elif args.command == "transcribe-file":
+        return transcribe_file(args)
     elif args.command == "delete":
         delete_recording(db, args.id)
     elif args.command == "cleanup":

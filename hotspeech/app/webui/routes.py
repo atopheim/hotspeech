@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import uvicorn
+import toml
 
 from ..db import Database
 from ..audio import AudioRecorder
@@ -28,18 +29,24 @@ class DeleteRequest(BaseModel):
     recording_id: int
 
 
+class DefaultModelRequest(BaseModel):
+    model: str
+
+
 # Global app state
 app = FastAPI(title="Hotspeech API")
 config = None
 db = None
 recorder = None
 transcriber = None
+config_path = None
 
 
 def initialize(app_config):
     """Initialize the FastAPI app with configuration"""
-    global config, db, recorder, transcriber
+    global config, db, recorder, transcriber, config_path
     config = app_config
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config.toml")
     db = Database(os.path.expanduser(config["storage"]["sqlite_path"]))
     recorder = AudioRecorder(config)
     transcriber = Transcriber(config)
@@ -64,12 +71,26 @@ def initialize(app_config):
 async def index(request: Request):
     """Render the main page"""
     recordings = db.get_recent_recordings(limit=int(config["storage"]["keep_last_n"]))
+    
+    # Get the current model name for display
+    current_model = config["transcription"]["model"]
+    
+    # Check if GPU is available for faster-whisper
+    gpu_available = False
+    try:
+        import torch
+        gpu_available = torch.cuda.is_available()
+    except ImportError:
+        pass
+    
     return app.state.templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "recordings": recordings,
             "title": "Hotspeech - Voice Transcription",
+            "current_model": current_model,
+            "gpu_available": gpu_available
         },
     )
 
@@ -111,6 +132,52 @@ async def transcribe_recording(request: TranscriptionRequest):
 
     # Return the updated recording
     return db.get_recording(request.recording_id)
+
+
+@app.post("/api/set-default-model")
+async def set_default_model(request: DefaultModelRequest):
+    """API endpoint to change the default transcription model"""
+    global config
+    
+    # Validate model option
+    valid_models = ["whisper-1", "faster-whisper"]
+    if request.model not in valid_models:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid model. Choose from: {', '.join(valid_models)}"
+        )
+    
+    try:
+        # Update in-memory config
+        config["transcription"]["model"] = request.model
+        
+        # Set backend accordingly
+        if request.model == "whisper-1":
+            config["transcription"]["backend"] = "api"
+        elif request.model == "faster-whisper":
+            config["transcription"]["backend"] = "local"
+        
+        # Reinitialize the transcriber with new config
+        transcriber.model = request.model
+        transcriber.backend = config["transcription"]["backend"]
+        
+        # Update the config file
+        if config_path:
+            # Read existing config
+            with open(config_path, "r") as f:
+                config_data = toml.load(f)
+            
+            # Update values
+            config_data["transcription"]["model"] = request.model
+            config_data["transcription"]["backend"] = config["transcription"]["backend"]
+            
+            # Write back
+            with open(config_path, "w") as f:
+                toml.dump(config_data, f)
+        
+        return {"success": True, "model": request.model}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update model: {str(e)}")
 
 
 @app.post("/api/copy/{recording_id}")

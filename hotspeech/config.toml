@@ -1,18 +1,18 @@
 [hotkeys]
-record_transcribe = "ctrl + shift + r"
+record_transcribe = "ctrl + alt + s"
 record_quicknote = "ctrl + shift + q"
 
 [recording]
 output_format = "wav"
-max_duration_seconds = 3600      # 1 hour max - effectively unlimited for most uses
+max_duration_seconds = 3600
 audio_dir = "~/.hotspeech/audio"
 
 [transcription]
-backend = "api"                      # options: api, local
-model = "whisper-1"
-fallback_model = "faster-whisper"
+backend = "local"
+model = "faster-whisper"
+fallback_model = "whisper-1"
 language = "en"
-api_key = "your-openai-api-key-here" # Replace with your actual OpenAI API key
+api_key = "your-openai-api-key-here"
 
 [storage]
 sqlite_path = "~/.hotspeech/hotspeech.db"
@@ -22,5 +22,5 @@ keep_last_n = 10
 enabled = true
 
 [webui]
-port = 8081
+port = 8082
 host = "127.0.0.1"

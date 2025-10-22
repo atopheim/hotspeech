@@ -123,10 +123,10 @@ This will start a web server and configure the hotkeys.
 
 ### Recording with hotkeys
 
-- Press `Ctrl+Shift+R` to start recording
+- Press `Ctrl+Alt+S` to start recording
   - A notification window will appear to confirm recording is in progress
   - You can click the "Stop Recording" button in this window to stop
-- Press `Ctrl+Shift+Q` to stop recording
+- Press `Ctrl+Alt+W` to stop recording
 - Press `Ctrl+Shift+N` for a quick note (quiet mode recording)
 - The transcription will be automatically copied to your clipboard
 
